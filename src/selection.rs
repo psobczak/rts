@@ -1,8 +1,10 @@
 use bevy::{prelude::*, sprite::Anchor, window::PrimaryWindow};
+use bevy_rapier2d::prelude::{Collider, Sensor};
 
 pub struct SelectionPlugin;
 
 #[derive(Debug)]
+/// Vec2 values are in screen position
 enum SelectionEvent {
     Start(Vec2),
     Current(Vec2),
@@ -13,7 +15,6 @@ enum SelectionEvent {
 struct Selection {
     width: f32,
     height: f32,
-    last_position: Vec2,
 }
 
 impl Plugin for SelectionPlugin {
@@ -76,6 +77,8 @@ fn start_drawing_selection(
                         ..default()
                     },
                     Name::from("Selection"),
+                    Collider::cuboid(10.0, 10.0),
+                    Sensor,
                 ));
             }
         }
@@ -97,33 +100,33 @@ fn despawn_selection(
 
 fn draw_selection(
     mut reader: EventReader<SelectionEvent>,
-    mut selection_query: Query<(&Selection, &mut Sprite)>,
+    mut selection_query: Query<(&Selection, &mut Sprite, &mut Collider)>,
 ) {
-    let (selection, mut sprite) = selection_query.single_mut();
+    let (selection, mut sprite, collider) = selection_query.single_mut();
     for event in reader.iter() {
         if let SelectionEvent::Current(_) = event {
-            sprite.custom_size = Some(Vec2::new(selection.width, selection.width))
+            sprite.custom_size = Some(Vec2::new(selection.width, selection.height));
         }
     }
 }
 
 fn set_selection_size(
-    mut selection: Query<&mut Selection>,
+    mut selection: Query<(&mut Selection, &GlobalTransform)>,
     mut reader: EventReader<SelectionEvent>,
     camera: Query<(&GlobalTransform, &Camera, With<Camera2d>)>,
 ) {
-    let mut selection = selection.single_mut();
+    let (mut selection, transform) = selection.single_mut();
     for event in reader.iter() {
         if let SelectionEvent::Current(current) = event {
+            let spawn_point = transform.translation();
             let (camera_transform, camera, _) = camera.single();
             if let Some(position) = Camera::viewport_to_world_2d(camera, camera_transform, *current)
             {
-                let width = position.x - selection.last_position.x;
-                let height = position.y - selection.last_position.y;
-                selection.width += width;
-                selection.height += height;
+                let width_diff = spawn_point.x - position.x;
+                let height_diff = spawn_point.y - position.y;
 
-                selection.last_position = position;
+                selection.width = -width_diff;
+                selection.height = height_diff;
             }
         }
     }
