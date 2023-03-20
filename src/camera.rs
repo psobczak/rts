@@ -1,26 +1,66 @@
 use bevy::{
-    core_pipeline::clear_color::ClearColorConfig, input::common_conditions::input_just_pressed,
+    core_pipeline::clear_color::ClearColorConfig,
     prelude::*,
+    window::{CursorGrabMode, PrimaryWindow},
 };
-use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
+use bevy_rapier3d::prelude::{Collider, Sensor};
+
+use crate::GameState;
 
 pub struct CameraPlugin;
 
 const CAMERA_MIN_HEIGHT: f32 = 3.0;
+const CAMERA_MAX_HEIGHT: f32 = 15.0;
+const CAMERA_START_HEIGHT: f32 = 7.0;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(FlyCameraPlugin)
-            .add_startup_system(spawn_camera)
-            .add_system(toggle_button_system.run_if(input_just_pressed(KeyCode::T)))
-            .add_system(restrict_camera);
+        app.add_startup_system(spawn_camera)
+            .add_system(restrict_camera)
+            .add_systems((restrict_camera,).in_set(OnUpdate(GameState::InGame)))
+            .add_system(set_cursor_as_confined.in_schedule(OnEnter(GameState::InGame)))
+            .add_system(release_cursor.in_schedule(OnEnter(GameState::Menu)));
     }
 }
 
-fn restrict_camera(mut camera: Query<(&mut Transform, With<FlyCamera>)>) {
+fn set_cursor_as_confined(mut window: Query<(&mut Window, With<PrimaryWindow>)>) {
+    let (mut window, _) = window.single_mut();
+    window.cursor.grab_mode = CursorGrabMode::Confined
+}
+
+fn release_cursor(mut window: Query<(&mut Window, With<PrimaryWindow>)>) {
+    let (mut window, _) = window.single_mut();
+    window.cursor.grab_mode = CursorGrabMode::None
+}
+
+// fn test_cast_ray(
+//     camera_2d: Query<(&GlobalTransform, &Collider, With<Camera3d>)>,
+//     ground: Query<(&GlobalTransform, &Collider, With<Unit>)>,
+// ) {
+//     let (camera_2d_transform, camera_collider, _) = camera_2d.single();
+//     let (ground_tranform, collider, _) = ground.single();
+
+//     // info!("ray_origin: {}", camera_2d_transform.translation());
+//     // info!("ray_dir: {}", ground_tranform.translation());
+
+//     let xd = camera_collider.cast_local_ray(
+//         camera_2d_transform.translation(),
+//         ground_tranform.translation(),
+//         1000.0,
+//         true,
+//     );
+
+//     // info!("{:?}", xd);
+// }
+
+fn restrict_camera(mut camera: Query<(&mut Transform, With<Camera3d>)>) {
     let (mut transform, _) = camera.single_mut();
     if transform.translation.y <= CAMERA_MIN_HEIGHT {
         transform.translation.y = CAMERA_MIN_HEIGHT
+    }
+
+    if transform.translation.y >= CAMERA_MAX_HEIGHT {
+        transform.translation.y = CAMERA_MAX_HEIGHT
     }
 }
 
@@ -32,7 +72,7 @@ fn spawn_camera(mut commands: Commands) {
                 shadows_enabled: true,
                 ..default()
             },
-            transform: Transform::default()
+            transform: Transform::from_xyz(0.0, CAMERA_START_HEIGHT, 0.0)
                 .with_rotation(Quat::from_rotation_x(-120.0_f32.to_radians())),
             ..default()
         },
@@ -48,8 +88,9 @@ fn spawn_camera(mut commands: Commands) {
             },
             ..default()
         },
-        FlyCamera::default(),
         Name::from("Camera 3d"),
+        Collider::default(),
+        Sensor,
     ));
 
     commands.spawn((
@@ -64,13 +105,7 @@ fn spawn_camera(mut commands: Commands) {
             ..default()
         },
         Name::from("Camera 2d"),
+        Collider::default(),
+        Sensor,
     ));
-}
-
-// Press "T" to toggle keyboard+mouse control over the camera
-fn toggle_button_system(mut query: Query<&mut FlyCamera>) {
-    for mut options in query.iter_mut() {
-        println!("Toggled FlyCamera enabled!");
-        options.enabled = !options.enabled;
-    }
 }

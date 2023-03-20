@@ -4,21 +4,13 @@ use bevy_rapier3d::prelude::Collider;
 pub struct GroundPlugin;
 
 const PLANE_SIZE: f32 = 100.0;
-const GRID_SIZE: f32 = 1.0;
 
-#[derive(Resource)]
-struct Grid {
-    columns: usize,
-    rows: usize,
-}
+#[derive(Component)]
+pub struct Ground;
 
 impl Plugin for GroundPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(Grid {
-            columns: (PLANE_SIZE / GRID_SIZE) as usize,
-            rows: (PLANE_SIZE / GRID_SIZE) as usize,
-        })
-        .add_startup_system(spawn_ground);
+        app.add_startup_system(spawn_ground);
     }
 }
 
@@ -35,5 +27,6 @@ fn spawn_ground(
         },
         Collider::cuboid(PLANE_SIZE / 2.0, 0.0, PLANE_SIZE / 2.0),
         Name::from("Ground"),
+        Ground,
     ));
 }

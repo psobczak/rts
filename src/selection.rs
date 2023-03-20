@@ -1,6 +1,8 @@
 use bevy::{prelude::*, sprite::Anchor, window::PrimaryWindow};
 use bevy_rapier2d::prelude::{Collider, Sensor};
 
+use crate::GameState;
+
 pub struct SelectionPlugin;
 
 #[derive(Debug)]
@@ -19,12 +21,16 @@ struct Selection {
 
 impl Plugin for SelectionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<SelectionEvent>()
-            .add_system(create_selection_events)
-            .add_system(start_drawing_selection)
-            .add_system(draw_selection.run_if(any_with_component::<Selection>()))
-            .add_system(set_selection_size.run_if(any_with_component::<Selection>()))
-            .add_system(despawn_selection);
+        app.add_event::<SelectionEvent>().add_systems(
+            (
+                create_selection_events,
+                start_drawing_selection,
+                draw_selection.run_if(any_with_component::<Selection>()),
+                set_selection_size.run_if(any_with_component::<Selection>()),
+                despawn_selection,
+            )
+                .in_set(OnUpdate(GameState::InGame)),
+        );
     }
 }
 
@@ -102,7 +108,7 @@ fn draw_selection(
     mut reader: EventReader<SelectionEvent>,
     mut selection_query: Query<(&Selection, &mut Sprite, &mut Collider)>,
 ) {
-    let (selection, mut sprite, collider) = selection_query.single_mut();
+    let (selection, mut sprite, _) = selection_query.single_mut();
     for event in reader.iter() {
         if let SelectionEvent::Current(_) = event {
             sprite.custom_size = Some(Vec2::new(selection.width, selection.height));
