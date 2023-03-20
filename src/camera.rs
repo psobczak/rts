@@ -20,7 +20,11 @@ const ZOOM_SPEED: f32 = 10.0;
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_systems((spawn_camera, set_default_cursor_position))
-            .add_systems((restrict_camera, move_camera, zoom).in_set(OnUpdate(GameState::InGame)))
+            .add_systems(
+                (move_camera, zoom, restrict_camera)
+                    .chain()
+                    .in_set(OnUpdate(GameState::InGame)),
+            )
             .add_system(set_cursor_as_confined.in_schedule(OnEnter(GameState::InGame)))
             .add_system(release_cursor.in_schedule(OnEnter(GameState::Menu)));
     }
@@ -123,8 +127,6 @@ fn spawn_camera(mut commands: Commands) {
             ..default()
         },
         Name::from("Camera 2d"),
-        Collider::default(),
-        Sensor,
     ));
 }
 

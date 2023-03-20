@@ -1,7 +1,7 @@
 use bevy::{prelude::*, sprite::Anchor, window::PrimaryWindow};
-use bevy_rapier2d::prelude::{Collider, Sensor};
+use bevy_rapier3d::prelude::Collider;
 
-use crate::GameState;
+use crate::{unit::Unit, GameState};
 
 pub struct SelectionPlugin;
 
@@ -19,18 +19,77 @@ struct Selection {
     height: f32,
 }
 
+#[derive(Component, Default, Debug, Reflect)]
+pub struct Selectable {
+    pub is_selected: bool,
+}
+
 impl Plugin for SelectionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<SelectionEvent>().add_systems(
-            (
-                create_selection_events,
-                start_drawing_selection,
-                draw_selection.run_if(any_with_component::<Selection>()),
-                set_selection_size.run_if(any_with_component::<Selection>()),
-                despawn_selection,
-            )
-                .in_set(OnUpdate(GameState::InGame)),
-        );
+        app.add_event::<SelectionEvent>()
+            .register_type::<Selectable>()
+            .add_systems(
+                (
+                    create_selection_events,
+                    start_drawing_selection,
+                    draw_selection.run_if(any_with_component::<Selection>()),
+                    set_selection_size.run_if(any_with_component::<Selection>()),
+                    despawn_selection,
+                    select_unit,
+                    deselect_unit,
+                )
+                    .in_set(OnUpdate(GameState::InGame)),
+            );
+    }
+}
+
+fn select_unit(
+    window: Query<(&Window, With<PrimaryWindow>)>,
+    camera: Query<(&Camera, &GlobalTransform, With<Camera3d>)>,
+    mut units: Query<(&Collider, &mut Selectable, With<Unit>)>,
+    input: Res<Input<MouseButton>>,
+) {
+    let (window, _) = window.single();
+    let (camera, camera_transform, _) = camera.single();
+
+    for (unit_collider, mut selectable, _) in &mut units {
+        if is_single_unit_selectable(camera, camera_transform, window, unit_collider)
+            && input.just_pressed(MouseButton::Left)
+        {
+            selectable.is_selected = true
+        }
+    }
+}
+
+fn is_single_unit_selectable(
+    camera: &Camera,
+    camera_transform: &GlobalTransform,
+    window: &Window,
+    unit_collider: &Collider,
+) -> bool {
+    if let Some(cursor_position) = window.cursor_position() {
+        if let Some(ray) = camera.viewport_to_world(camera_transform, cursor_position) {
+            return unit_collider.intersects_local_ray(ray.origin, ray.direction, 100.0);
+        }
+    }
+
+    false
+}
+
+fn deselect_unit(
+    window: Query<(&Window, With<PrimaryWindow>)>,
+    camera: Query<(&Camera, &GlobalTransform, With<Camera3d>)>,
+    mut units: Query<(&Collider, &mut Selectable, With<Unit>)>,
+    input: Res<Input<MouseButton>>,
+) {
+    let (window, _) = window.single();
+    let (camera, camera_transform, _) = camera.single();
+    for (unit_collider, mut selectable, _) in &mut units {
+        if !is_single_unit_selectable(camera, camera_transform, window, unit_collider)
+            && input.just_released(MouseButton::Left)
+        {
+            selectable.is_selected = false;
+        }
     }
 }
 
@@ -83,8 +142,6 @@ fn start_drawing_selection(
                         ..default()
                     },
                     Name::from("Selection"),
-                    Collider::cuboid(10.0, 10.0),
-                    Sensor,
                 ));
             }
         }
@@ -106,9 +163,9 @@ fn despawn_selection(
 
 fn draw_selection(
     mut reader: EventReader<SelectionEvent>,
-    mut selection_query: Query<(&Selection, &mut Sprite, &mut Collider)>,
+    mut selection_query: Query<(&Selection, &mut Sprite)>,
 ) {
-    let (selection, mut sprite, _) = selection_query.single_mut();
+    let (selection, mut sprite) = selection_query.single_mut();
     for event in reader.iter() {
         if let SelectionEvent::Current(_) = event {
             sprite.custom_size = Some(Vec2::new(selection.width, selection.height));
@@ -137,3 +194,6 @@ fn set_selection_size(
         }
     }
 }
+
+
+// TODO: Send movement order as event maybe?
