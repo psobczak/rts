@@ -146,3 +146,22 @@ fn zoom(
         }
     }
 }
+
+pub fn get_point_on_ground(
+    window: &Window,
+    camera: &Camera,
+    camera_transform: &GlobalTransform,
+    ground_collider: &Collider,
+) -> Option<Vec3> {
+    if let Some(cursor_position) = window.cursor_position() {
+        if let Some(ray) = camera.viewport_to_world(camera_transform, cursor_position) {
+            if let Some(toi) =
+                ground_collider.cast_local_ray(ray.origin, ray.direction, 100.0, true)
+            {
+                return Some(ray.origin + ray.direction * toi);
+            }
+        }
+    }
+
+    None
+}

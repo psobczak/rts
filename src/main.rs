@@ -3,10 +3,12 @@ mod game;
 mod ground;
 mod selection;
 mod unit;
+mod order;
 
 use camera::CameraPlugin;
 use game::GamePlugin;
 use ground::GroundPlugin;
+use order::OrderPlugin;
 use selection::SelectionPlugin;
 use unit::UnitPlugin;
 
@@ -44,6 +46,7 @@ fn main() {
         .add_plugin(UnitPlugin)
         .add_plugin(GroundPlugin)
         .add_plugin(SelectionPlugin)
+        .add_plugin(OrderPlugin)
         .add_plugin(GamePlugin)
         .run();
 }

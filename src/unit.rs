@@ -1,8 +1,8 @@
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::prelude::*;
 use bevy_inspector_egui::{prelude::ReflectInspectorOptions, InspectorOptions};
 use bevy_rapier3d::prelude::{Collider, RigidBody};
 
-use crate::{ground::Ground, selection::Selectable, GameState};
+use crate::{order::OrderEvent, selection::Selectable, GameState};
 
 pub struct UnitPlugin;
 
@@ -20,7 +20,7 @@ impl Plugin for UnitPlugin {
         app.insert_resource(UnitCount::default())
             .register_type::<UnitCount>()
             .add_startup_system(spawn_unit)
-            .add_systems((handle_highlight, move_unit).in_set(OnUpdate(GameState::InGame)));
+            .add_systems((handle_highlight, move_units).in_set(OnUpdate(GameState::InGame)));
     }
 }
 
@@ -65,28 +65,15 @@ fn handle_highlight(
     }
 }
 
-fn move_unit(
-    mut units: Query<(&mut Transform, With<Unit>, &Selectable)>,
+fn move_units(
+    mut reader: EventReader<OrderEvent>,
+    mut units: Query<(&mut Transform, Entity, With<Unit>)>,
     time: Res<Time>,
-    window: Query<(&Window, With<PrimaryWindow>)>,
-    camera: Query<(&Camera, &GlobalTransform, With<Camera3d>)>,
-    ground: Query<( &Collider, With<Ground>)>,
-    input: Res<Input<MouseButton>>,
 ) {
-    let (window, _) = window.single();
-    for (mut transform, _, selectable) in &mut units {
-        if selectable.is_selected && input.just_pressed(MouseButton::Right) {
-            let (camera, camera_transform, _) = camera.single();
-            if let Some(cursor_position) = window.cursor_position() {
-                if let Some(ray) = camera.viewport_to_world(camera_transform, cursor_position) {
-                    let (ground_collider, _) = ground.single();
-                    if let Some(toi) =
-                        ground_collider.cast_local_ray(ray.origin, ray.direction, 100.0, true)
-                    {
-                        let target = ray.origin + ray.direction * toi;
-                        transform.translation = Vec3::new(target.x, UNIT_SIZE / 2.0, target.z)
-                    }
-                }
+    for event in reader.iter() {
+        if let OrderEvent::Move((unit, destination)) = event {
+            if let Ok((mut transform, _, _)) = units.get_mut(*unit) {
+                transform.translation = Vec3::new(destination.x, UNIT_SIZE / 2.0, destination.z);
             }
         }
     }
