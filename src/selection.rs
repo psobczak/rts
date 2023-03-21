@@ -195,5 +195,4 @@ fn set_selection_size(
     }
 }
 
-
 // TODO: Send movement order as event maybe?
