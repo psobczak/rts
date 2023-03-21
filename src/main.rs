@@ -1,16 +1,15 @@
 mod camera;
 mod game;
 mod ground;
-mod selection;
-mod unit;
 mod order;
+mod selection;
+mod units;
 
 use camera::CameraPlugin;
 use game::GamePlugin;
 use ground::GroundPlugin;
 use order::OrderPlugin;
 use selection::SelectionPlugin;
-use unit::UnitPlugin;
 
 use bevy::{input::common_conditions::input_toggle_active, prelude::*, window::PresentMode};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
@@ -18,6 +17,7 @@ use bevy_rapier3d::{
     prelude::{NoUserData, RapierPhysicsPlugin},
     render::RapierDebugRenderPlugin,
 };
+use units::UnitPlugin;
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 pub enum GameState {
@@ -42,8 +42,8 @@ fn main() {
         )
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin::default())
-        .add_plugin(CameraPlugin)
         .add_plugin(UnitPlugin)
+        .add_plugin(CameraPlugin)
         .add_plugin(GroundPlugin)
         .add_plugin(SelectionPlugin)
         .add_plugin(OrderPlugin)

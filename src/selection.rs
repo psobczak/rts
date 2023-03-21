@@ -1,7 +1,7 @@
 use bevy::{prelude::*, sprite::Anchor, window::PrimaryWindow};
 use bevy_rapier3d::prelude::Collider;
 
-use crate::{unit::Unit, GameState};
+use crate::{units::Unit, GameState};
 
 pub struct SelectionPlugin;
 
@@ -194,5 +194,3 @@ fn set_selection_size(
         }
     }
 }
-
-// TODO: Send movement order as event maybe?
