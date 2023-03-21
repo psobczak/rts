@@ -4,7 +4,7 @@ use bevy::{prelude::*, window::PrimaryWindow};
 use bevy_rapier3d::prelude::Collider;
 
 use crate::{
-    camera::get_point_on_ground,
+    cursor::get_point_on_ground,
     ground::Ground,
     selection::Selectable,
     units::{Unit, UnitState},

@@ -32,7 +32,7 @@ fn spawn_unit(
             ..default()
         },
         Collider::cuboid(UNIT_SIZE / 2.0, UNIT_SIZE / 2.0, UNIT_SIZE / 2.0),
-        RigidBody::Dynamic,
+        RigidBody::KinematicPositionBased,
         Name::from("Unit"),
         Unit::default(),
         Selectable::default(),

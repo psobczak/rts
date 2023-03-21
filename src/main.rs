@@ -1,4 +1,5 @@
 mod camera;
+mod cursor;
 mod game;
 mod ground;
 mod order;
@@ -6,6 +7,7 @@ mod selection;
 mod units;
 
 use camera::CameraPlugin;
+use cursor::CursorPlugin;
 use game::GamePlugin;
 use ground::GroundPlugin;
 use order::OrderPlugin;
@@ -48,5 +50,6 @@ fn main() {
         .add_plugin(SelectionPlugin)
         .add_plugin(OrderPlugin)
         .add_plugin(GamePlugin)
+        .add_plugin(CursorPlugin)
         .run();
 }

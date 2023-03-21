@@ -1,8 +1,6 @@
 use bevy::{
-    core_pipeline::clear_color::ClearColorConfig,
-    input::mouse::MouseWheel,
-    prelude::*,
-    window::{CursorGrabMode, PrimaryWindow},
+    core_pipeline::clear_color::ClearColorConfig, input::mouse::MouseWheel, prelude::*,
+    window::PrimaryWindow,
 };
 use bevy_rapier3d::prelude::{Collider, Sensor};
 
@@ -19,32 +17,12 @@ const ZOOM_SPEED: f32 = 10.0;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_systems((spawn_camera, set_default_cursor_position))
-            .add_systems(
-                (move_camera, zoom, restrict_camera)
-                    .chain()
-                    .in_set(OnUpdate(GameState::InGame)),
-            )
-            .add_system(set_cursor_as_confined.in_schedule(OnEnter(GameState::InGame)))
-            .add_system(release_cursor.in_schedule(OnEnter(GameState::Menu)));
+        app.add_startup_system(spawn_camera).add_systems(
+            (move_camera, zoom, restrict_camera)
+                .chain()
+                .in_set(OnUpdate(GameState::InGame)),
+        );
     }
-}
-
-fn set_default_cursor_position(mut window: Query<(&mut Window, With<PrimaryWindow>)>) {
-    let (mut window, _) = window.single_mut();
-    let x = window.width() / 2.0;
-    let y = window.height() / 2.0;
-    window.set_cursor_position(Some(Vec2::new(x, y)))
-}
-
-fn set_cursor_as_confined(mut window: Query<(&mut Window, With<PrimaryWindow>)>) {
-    let (mut window, _) = window.single_mut();
-    window.cursor.grab_mode = CursorGrabMode::Confined
-}
-
-fn release_cursor(mut window: Query<(&mut Window, With<PrimaryWindow>)>) {
-    let (mut window, _) = window.single_mut();
-    window.cursor.grab_mode = CursorGrabMode::None
 }
 
 fn move_camera(
@@ -147,21 +125,3 @@ fn zoom(
     }
 }
 
-pub fn get_point_on_ground(
-    window: &Window,
-    camera: &Camera,
-    camera_transform: &GlobalTransform,
-    ground_collider: &Collider,
-) -> Option<Vec3> {
-    if let Some(cursor_position) = window.cursor_position() {
-        if let Some(ray) = camera.viewport_to_world(camera_transform, cursor_position) {
-            if let Some(toi) =
-                ground_collider.cast_local_ray(ray.origin, ray.direction, 100.0, true)
-            {
-                return Some(ray.origin + ray.direction * toi);
-            }
-        }
-    }
-
-    None
-}

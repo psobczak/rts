@@ -1,5 +1,5 @@
 use bevy::{prelude::*, sprite::Anchor, window::PrimaryWindow};
-use bevy_rapier3d::prelude::Collider;
+use bevy_rapier3d::prelude::{Collider, Sensor};
 
 use crate::{units::Unit, GameState};
 
@@ -142,6 +142,8 @@ fn start_drawing_selection(
                         ..default()
                     },
                     Name::from("Selection"),
+                    Collider::default(),
+                    Sensor,
                 ));
             }
         }
