@@ -27,10 +27,14 @@ enum CursorEvent {
     OutOfBounds,
 }
 
+#[derive(Component, Default, Reflect)]
+struct DespawnCounter(u8);
+
 impl Plugin for CursorPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(ResourceInspectorPlugin::<CursorPosition>::default())
             .register_type::<CursorPosition>()
+            .register_type::<DespawnCounter>()
             .init_resource::<CursorPosition>()
             .add_event::<CursorEvent>()
             .add_startup_system(set_default_cursor_position)
@@ -43,7 +47,8 @@ impl Plugin for CursorPlugin {
                     spawn_move_mark.run_if(resource_exists::<CursorPosition>()),
                     add_cursor_position_resource.run_if(not(resource_exists::<CursorPosition>())),
                     handle_cursor_over_ground,
-                    decrease_move_mark_alpha,
+                    decrease_move_mark_scale,
+                    despawn_move_mark,
                 )
                     .in_set(OnUpdate(GameState::InGame)),
             );
@@ -153,27 +158,37 @@ fn spawn_move_mark(
             },
             MoveSphereDissapearTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
             MoveMark,
+            DespawnCounter::default(),
         ));
     }
 }
 
-fn decrease_move_mark_alpha(
+fn decrease_move_mark_scale(
     mut marks: Query<(
-        &Handle<StandardMaterial>,
         &mut MoveSphereDissapearTimer,
+        &mut Transform,
+        &mut DespawnCounter,
         With<MoveMark>,
     )>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     time: Res<Time>,
 ) {
-    for (handle, mut timer, _) in &mut marks {
-        if let Some(material) = materials.get_mut(handle) {
-            timer.0.tick(time.delta());
+    for (mut timer, mut transform, mut despawn_counter, _) in &mut marks {
+        timer.0.tick(time.delta());
+        if timer.0.just_finished() {
+            despawn_counter.0 += 1;
+            let scale = transform.scale;
+            transform.scale = scale - 0.1;
+        }
+    }
+}
 
-            if timer.0.just_finished() {
-                let last_alpha = material.base_color.a();
-                material.base_color.set_a(last_alpha + 0.1);
-            }
+fn despawn_move_mark(
+    marks: Query<(&DespawnCounter, Entity, With<MoveMark>)>,
+    mut commands: Commands,
+) {
+    for (despawn_counter, entity, _) in &marks {
+        if despawn_counter.0 == 10 {
+            commands.entity(entity).despawn_recursive()
         }
     }
 }
